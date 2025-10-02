@@ -364,7 +364,7 @@ with leaderboard_tab:
         except Exception:
             st.experimental_rerun()
 
-       rows = fetch_latest_by_team()
+    rows = fetch_latest_by_team()
     scores = compute_scores(rows)
 
     c1, c2, c3 = st.columns(3)
