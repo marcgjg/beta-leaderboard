@@ -364,9 +364,7 @@ with leaderboard_tab:
         except Exception:
             st.experimental_rerun()
 
-    st.caption("The latest submission per student counts toward the ranking.")
-
-    rows = fetch_latest_by_team()
+       rows = fetch_latest_by_team()
     scores = compute_scores(rows)
 
     c1, c2, c3 = st.columns(3)
