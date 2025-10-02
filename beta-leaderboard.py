@@ -373,7 +373,6 @@ with leaderboard_tab:
         data = [{
             "Rank": i+1,
             "Name": r.get("student_name"),
-            "Email": r.get("email"),
             "Stock": r.get("stock0"),
             "Beta": r.get("beta0"),
             "Error": round(r.get("err0"), 4) if r.get("err0") is not None else None,
@@ -384,7 +383,7 @@ with leaderboard_tab:
         st.markdown("### 🥈 Closest to 1")
         data = [{
             "Rank": i+1,
-            "Team": r["team"],
+            "Name": r.get("student_name"),
             "Stock": r.get("stock1"),
             "Beta": r.get("beta1"),
             "Error": round(r.get("err1"), 4) if r.get("err1") is not None else None,
@@ -395,7 +394,7 @@ with leaderboard_tab:
         st.markdown("### 🥉 Highest beta")
         data = [{
             "Rank": i+1,
-            "Team": r["team"],
+            "Name": r.get("student_name"),
             "Stock": r.get("stock_hi"),
             "Beta": r.get("beta_hi"),
         } for i, r in enumerate(scores["high"][:10])]
@@ -405,7 +404,7 @@ with leaderboard_tab:
     st.markdown("### Overall (sum of ranks)")
     data = [{
         "Rank": i+1,
-        "Team": r["team"],
+        "Name": r.get("student_name"),
         "Near 0 rank": r.get("rank0"),
         "Near 1 rank": r.get("rank1"),
         "High beta rank": r.get("rankh"),
