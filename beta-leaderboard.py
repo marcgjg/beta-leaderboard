@@ -216,7 +216,7 @@ def fetch_all_submissions() -> List[Dict[str, Any]]:
 
 
 def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
-    """Convert submissions to Excel format."""
+    """Convert submissions to Excel format with clickable hyperlinks."""
     # Select relevant columns for export
     data = []
     for r in rows:
@@ -242,6 +242,28 @@ def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Submissions')
+        
+        # Get the worksheet to add hyperlinks
+        worksheet = writer.sheets['Submissions']
+        
+        # Find URL columns (columns F, I, L - indices 6, 9, 12 in 1-based)
+        url_columns = {
+            'F': 'Screenshot URL (Near 0)',
+            'I': 'Screenshot URL (Near 1)', 
+            'L': 'Screenshot URL (Highest)'
+        }
+        
+        # Convert URLs to hyperlinks (start from row 2, skip header)
+        for row_idx in range(2, len(df) + 2):  # Excel rows are 1-based, +1 for header
+            for col_letter, col_name in url_columns.items():
+                cell = worksheet[f'{col_letter}{row_idx}']
+                url = cell.value
+                if url and isinstance(url, str) and url.startswith('http'):
+                    # Create hyperlink
+                    cell.hyperlink = url
+                    cell.value = "View Screenshot"
+                    cell.style = "Hyperlink"
+    
     output.seek(0)
     return output
 
