@@ -423,6 +423,7 @@ with submit_tab:
             upload_text = "**Evidence uploaded:**\n" + "\n".join([f"- {label}: [{url}]({url})" for label, url in urls if url])
             st.markdown(upload_text)
         st.success("Submitted ✓")
+        time.sleep(3)  # Display success message for 3 seconds
         try:
             st.rerun()                 # Streamlit ≥ 1.32
         except Exception:
