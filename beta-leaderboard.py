@@ -175,8 +175,14 @@ def save_submission(team: str, student_name: str, email: str, row: Dict[str, Any
         "notes": (row.get("notes") or "").strip(),
     }
 
-    res = sb.table(table).insert(payload).execute()
-    return {"res": res, "shot0_url": shot0_url, "shot1_url": shot1_url, "shothi_url": shothi_url}
+    try:
+        res = sb.table(table).insert(payload).execute()
+        return {"res": res, "shot0_url": shot0_url, "shot1_url": shot1_url, "shothi_url": shothi_url}
+    except Exception as e:
+        error_msg = str(e)
+        st.error(f"❌ Database error: {error_msg}")
+        st.error("This is likely a Row Level Security (RLS) policy issue. Please check the setup instructions below.")
+        st.stop()
 
 
 def fetch_latest_by_team() -> List[Dict[str, Any]]:
