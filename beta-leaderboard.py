@@ -37,6 +37,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, List
+from io import BytesIO
 
 import streamlit as st
 
@@ -44,6 +45,12 @@ try:
     from supabase import create_client, Client
 except Exception as e:  # pragma: no cover
     st.error("Supabase client not installed. Add `supabase` (or `supabase-py`) to requirements.txt and reboot the app.")
+    st.stop()
+
+try:
+    import pandas as pd
+except Exception as e:
+    st.error("Pandas not installed. Add `pandas` to requirements.txt and reboot the app.")
     st.stop()
 
 TARGETS = {"near_zero": 0.0, "near_one": 1.0}
@@ -198,6 +205,45 @@ def fetch_latest_by_team() -> List[Dict[str, Any]]:
         if t and t not in latest:
             latest[t] = r
     return list(latest.values())
+
+
+def fetch_all_submissions() -> List[Dict[str, Any]]:
+    """Fetch all submissions (not just latest per team) for export."""
+    sb = get_client()
+    _, table, _ = get_storage_cfg()
+    res = sb.table(table).select("*").order("created_at", desc=True).execute()
+    return res.data or []
+
+
+def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
+    """Convert submissions to Excel format."""
+    # Select relevant columns for export
+    data = []
+    for r in rows:
+        data.append({
+            "Submitted": r.get("created_at"),
+            "Name": r.get("student_name"),
+            "Email": r.get("email"),
+            "Stock (Near 0)": r.get("stock0"),
+            "Beta (Near 0)": r.get("beta0"),
+            "Screenshot URL (Near 0)": r.get("shot0_url"),
+            "Stock (Near 1)": r.get("stock1"),
+            "Beta (Near 1)": r.get("beta1"),
+            "Screenshot URL (Near 1)": r.get("shot1_url"),
+            "Stock (Highest)": r.get("stock_hi"),
+            "Beta (Highest)": r.get("beta_hi"),
+            "Screenshot URL (Highest)": r.get("shothi_url"),
+            "Notes": r.get("notes"),
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # Create Excel file in memory
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Submissions')
+    output.seek(0)
+    return output
 
 
 def compute_scores(rows: List[Dict[str, Any]]):
@@ -427,6 +473,24 @@ with admin_tab:
         st.success("Access granted")
         sb = get_client()
         
+        st.markdown("### Export submissions")
+        if st.button("📥 Download all submissions as Excel"):
+            with st.spinner("Preparing Excel file..."):
+                all_submissions = fetch_all_submissions()
+                if all_submissions:
+                    excel_file = export_to_excel(all_submissions)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    st.download_button(
+                        label="💾 Download Excel File",
+                        data=excel_file,
+                        file_name=f"beta_hunt_submissions_{timestamp}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                    st.success(f"✅ Ready! Found {len(all_submissions)} submission(s).")
+                else:
+                    st.info("No submissions to export yet.")
+        
+        st.markdown("---")
         st.markdown("### Delete specific submissions")
         team_to_delete = st.text_input("Email to delete")
         if st.button("Delete submissions") and team_to_delete.strip():
