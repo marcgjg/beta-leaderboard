@@ -68,6 +68,36 @@ def get_client() -> Client:
         st.stop()
     return create_client(url, key)
 
+
+def check_database_health():
+    """Check if Supabase is accessible and not paused."""
+    try:
+        sb = get_client()
+        _, table, _ = get_storage_cfg()
+        sb.table(table).select("id").limit(1).execute()
+        return True
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "connection" in error_msg or "timeout" in error_msg or "fetch" in error_msg or "api" in error_msg:
+            st.error("🛑 **Supabase Database is Paused or Unavailable**")
+            st.warning("""
+            Your Supabase project appears to be paused (inactive for 7+ days) or unreachable.
+            
+            **To restore it:**
+            1. Go to [supabase.com/dashboard](https://supabase.com/dashboard)
+            2. Find your project
+            3. Click the **"Restore"** or **"Resume"** button
+            4. Wait 10-30 seconds for it to wake up
+            5. Refresh this page
+            
+            Your data is safe and will be restored!
+            """)
+            st.stop()
+        else:
+            st.error(f"❌ Database connection error: {e}")
+            st.stop()
+        return False
+
 @st.cache_resource(show_spinner=False)
 def get_storage_cfg():
     cfg = st.secrets.get("supabase", {})
@@ -369,9 +399,14 @@ with submit_tab:
         # Check if this email has already submitted
         sb = get_client()
         _, table_name, _ = get_storage_cfg()
-        existing = sb.table(table_name).select("id").eq("team", email.strip().lower()).execute()
-        if existing.data and len(existing.data) > 0:
-            st.error("❌ This email has already submitted. Each student can only submit once. If you need to change your submission, please contact the instructor.")
+        try:
+            existing = sb.table(table_name).select("id").eq("team", email.strip().lower()).execute()
+            if existing.data and len(existing.data) > 0:
+                st.error("❌ This email has already submitted. Each student can only submit once. If you need to change your submission, please contact the instructor.")
+                st.stop()
+        except Exception as e:
+            st.error("❌ Database error while checking existing submissions. The database might be paused.")
+            st.info("Please refresh the page. If the error persists, the instructor needs to restore the Supabase database.")
             st.stop()
         
         # Check screenshots are uploaded
