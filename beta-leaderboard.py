@@ -334,6 +334,9 @@ st.title(APP_TITLE)
 
 st.caption("Submit three stocks with betas and screenshots as proof. Each student can submit only once.")
 
+# Check database health on app load
+check_database_health()
+
 # Branding (optional): light accent line using your brand color (RGB 9,155,221)
 st.markdown("""
 <style>
@@ -486,6 +489,7 @@ with leaderboard_tab:
             "Stock": r.get("stock0"),
             "Beta": r.get("beta0"),
             "Error": round(r.get("err0"), 4) if r.get("err0") is not None else None,
+            "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores["near0"][:10])]
         st.dataframe(data, use_container_width=True, hide_index=True)
 
@@ -497,6 +501,7 @@ with leaderboard_tab:
             "Stock": r.get("stock1"),
             "Beta": r.get("beta1"),
             "Error": round(r.get("err1"), 4) if r.get("err1") is not None else None,
+            "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores["near1"][:10])]
         st.dataframe(data, use_container_width=True, hide_index=True)
 
@@ -507,6 +512,7 @@ with leaderboard_tab:
             "Name": r.get("student_name"),
             "Stock": r.get("stock_hi"),
             "Beta": r.get("beta_hi"),
+            "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores["high"][:10])]
         st.dataframe(data, use_container_width=True, hide_index=True)
 
@@ -519,6 +525,7 @@ with leaderboard_tab:
         "Near 1 rank": r.get("rank1"),
         "High beta rank": r.get("rankh"),
         "Total": r.get("total_rank"),
+        "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
     } for i, r in enumerate(scores["overall"][:20])]
     st.dataframe(data, use_container_width=True, hide_index=True)
 
