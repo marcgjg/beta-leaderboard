@@ -1,15 +1,4 @@
-try:
-        # supabase-py v2 signature supports bytes and file_options
-        sb.storage.from_(bucket).upload(
-            path=path,
-            file=data,
-            file_options={"content-type": mime or "application/octet-stream", "x-upsert": "true"},
-        )
-        return sb.storage.from_(bucket).get_public_url(path)
-    except Exception as e:
-        # Provide helpful error message
-        error_msg = str(e)
-        if "not found" in error_msg.lower():# streamlit_app.py
+# streamlit_app.py
 # ---
 # "Beta Hunt" – Streamlit classroom app
 # Students submit three stocks: beta ≈ 0, beta ≈ 1, and highest beta they can find.
@@ -58,7 +47,7 @@ import streamlit as st
 
 try:
     from supabase import create_client, Client
-except Exception as e:  # pragma: no cover
+except Exception as e:
     st.error("Supabase client not installed. Add `supabase` (or `supabase-py`) to requirements.txt and reboot the app.")
     st.stop()
 
@@ -113,6 +102,7 @@ def check_database_health():
             st.stop()
         return False
 
+
 @st.cache_resource(show_spinner=False)
 def get_storage_cfg():
     cfg = st.secrets.get("supabase", {})
@@ -159,23 +149,6 @@ def validate_betas(beta0, beta1, betahi) -> List[str]:
 
 
 def validate_file_uploads(shot0, shot1, shothi) -> List[str]:
-    """Validate uploaded files for size and type."""
-    max_size_mb = 5  # 5MB limit per file
-    max_size_bytes = max_size_mb * 1024 * 1024
-    
-    errors = []
-    for label, file in [("Near 0 screenshot", shot0), ("Near 1 screenshot", shot1), ("Highest beta screenshot", shothi)]:
-        if file:
-            file_size = getattr(file, "size", 0)
-            if file_size > max_size_bytes:
-                errors.append(f"{label} is too large ({file_size / 1024 / 1024:.1f}MB). Maximum size is {max_size_mb}MB.")
-            if file_size == 0:
-                errors.append(f"{label} appears to be empty.")
-    
-    return errors
-
-
-def validate_file_uploads(shot0, shot1, shothi):
     """Validate uploaded files for size and type."""
     max_size_mb = 5  # 5MB limit per file
     max_size_bytes = max_size_mb * 1024 * 1024
@@ -242,7 +215,7 @@ def upload_to_storage(sb: Client, file, path: str, bucket: str) -> str:
         st.stop()
 
 
-def save_submission(team: str, student_name: str, email: str, row: Dict[str, Any], files: Dict[str, Any]):
+def save_submission(team: str, student_name: str, email: str, section: str, row: Dict[str, Any], files: Dict[str, Any]):
     sb = get_client()
     bucket, table, _ = get_storage_cfg()
 
@@ -256,6 +229,7 @@ def save_submission(team: str, student_name: str, email: str, row: Dict[str, Any
         "team": (team or "").strip(),
         "student_name": (student_name or "").strip(),
         "email": (email or "").strip(),
+        "section": (section or "").strip(),
         "stock0": (row.get("stock0") or "").strip().upper(),
         "beta0": row.get("beta0"),
         "stock1": (row.get("stock1") or "").strip().upper(),
@@ -506,14 +480,6 @@ with submit_tab:
             for err in file_errors:
                 st.error(err)
             st.info("💡 **Tip:** If your screenshots are too large, try:\n- Taking a new screenshot at lower resolution\n- Compressing the image using a free tool like TinyPNG\n- Converting PNG to JPG (usually smaller)\n- Cropping to show only the relevant beta information")
-            st.stop()
-        
-        # Validate file sizes
-        file_errors = validate_file_uploads(shot0, shot1, shothi)
-        if file_errors:
-            for err in file_errors:
-                st.error(err)
-            st.info("💡 **Tip:** If your screenshots are too large, try:\n- Taking a new screenshot at lower resolution\n- Compressing the image using a free tool\n- Converting to JPG instead of PNG\n- Cropping to show only the relevant information")
             st.stop()
         
         b0 = _safe_float(beta0)
