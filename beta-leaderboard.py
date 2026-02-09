@@ -57,6 +57,14 @@ except Exception as e:
     st.error("Pandas not installed. Add `pandas` to requirements.txt and reboot the app.")
     st.stop()
 
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+except Exception as e:
+    st.error("Matplotlib not installed. Add `matplotlib` to requirements.txt and reboot the app.")
+    st.stop()
+
 TARGETS = {"near_zero": 0.0, "near_one": 1.0}
 BETA_MIN, BETA_MAX = -5.0, 20.0
 APP_TITLE = "📈 Beta Hunt: Find 0, 1, and Highest"
@@ -345,6 +353,82 @@ def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
     return output
 
 
+def export_top3_leaderboard(section: str) -> BytesIO:
+    """Export top 3 for each category as an image."""
+    rows = fetch_latest_by_section(section)
+    scores = compute_scores(rows)
+    
+    # Create figure with white background
+    fig, ax = plt.subplots(figsize=(12, 10))
+    fig.patch.set_facecolor('white')
+    ax.axis('off')
+    
+    # Title
+    title_text = f"{section} - Beta Hunt Leaderboard"
+    ax.text(0.5, 0.95, title_text, ha='center', va='top', fontsize=20, fontweight='bold', color='#099DDD')
+    
+    y_position = 0.88
+    
+    # Category 1: Closest to 0
+    ax.text(0.5, y_position, "🥇 Closest to Beta = 0", ha='center', va='top', fontsize=16, fontweight='bold')
+    y_position -= 0.05
+    for i, r in enumerate(scores["near0"][:3]):
+        name = r.get('student_name', 'N/A')
+        stock = r.get('stock0', 'N/A')
+        beta = r.get('beta0', 0)
+        error = r.get('err0', 0)
+        text = f"{i+1}. {name} - {stock} (β = {beta:.4f}, Error: {error:.4f})"
+        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
+        y_position -= 0.04
+    
+    y_position -= 0.03
+    
+    # Category 2: Closest to 1
+    ax.text(0.5, y_position, "🥈 Closest to Beta = 1", ha='center', va='top', fontsize=16, fontweight='bold')
+    y_position -= 0.05
+    for i, r in enumerate(scores["near1"][:3]):
+        name = r.get('student_name', 'N/A')
+        stock = r.get('stock1', 'N/A')
+        beta = r.get('beta1', 0)
+        error = r.get('err1', 0)
+        text = f"{i+1}. {name} - {stock} (β = {beta:.4f}, Error: {error:.4f})"
+        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
+        y_position -= 0.04
+    
+    y_position -= 0.03
+    
+    # Category 3: Highest Beta
+    ax.text(0.5, y_position, "🥉 Highest Beta", ha='center', va='top', fontsize=16, fontweight='bold')
+    y_position -= 0.05
+    for i, r in enumerate(scores["high"][:3]):
+        name = r.get('student_name', 'N/A')
+        stock = r.get('stock_hi', 'N/A')
+        beta = r.get('beta_hi', 0)
+        text = f"{i+1}. {name} - {stock} (β = {beta:.4f})"
+        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
+        y_position -= 0.04
+    
+    y_position -= 0.03
+    
+    # Overall Top 3
+    ax.text(0.5, y_position, "🏆 Overall Top 3 (Sum of Ranks)", ha='center', va='top', fontsize=16, fontweight='bold')
+    y_position -= 0.05
+    for i, r in enumerate(scores["overall"][:3]):
+        name = r.get('student_name', 'N/A')
+        total = r.get('total_rank', 0)
+        text = f"{i+1}. {name} (Total: {total} points)"
+        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
+        y_position -= 0.04
+    
+    # Save to BytesIO
+    output = BytesIO()
+    plt.tight_layout()
+    plt.savefig(output, format='png', dpi=150, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    output.seek(0)
+    return output
+
+
 def compute_scores(rows: List[Dict[str, Any]]):
     for r in rows:
         r["err0"] = None if r.get("beta0") is None else abs(r["beta0"] - TARGETS["near_zero"])
@@ -401,7 +485,7 @@ with submit_tab:
     with st.form("submission_form", clear_on_submit=False):
         student_name = st.text_input("Your name *")
         email = st.text_input("Email *")
-        section = st.selectbox("Section *", options=["Section F1", "Section F2"])
+        section = st.selectbox("Section *", options=["-- Select your section --", "Section F1", "Section F2"])
 
         st.markdown("---")
         st.markdown("**1) Near 0 beta**")
@@ -446,8 +530,8 @@ with submit_tab:
         if not validate_email(email):
             st.error("Please enter a valid email address (e.g., student@university.edu).")
             st.stop()
-        if not section:
-            st.error("Please select your section.")
+        if not section or section == "-- Select your section --":
+            st.error("Please select your section (F1 or F2).")
             st.stop()
         
         # Check if this email has already submitted
@@ -673,6 +757,32 @@ with admin_tab:
                     st.success(f"✅ Ready! Found {len(all_submissions)} submission(s).")
                 else:
                     st.info("No submissions to export yet.")
+        
+        st.markdown("### Export Top 3 Leaderboards (for forums)")
+        st.caption("Download images showing top 3 in each category, perfect for posting to discussion forums.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📋 Generate F1 Top 3 Image"):
+                with st.spinner("Creating image..."):
+                    top3_image = export_top3_leaderboard("Section F1")
+                    st.download_button(
+                        label="💾 Download F1 Leaderboard Image",
+                        data=top3_image,
+                        file_name="beta_hunt_top3_F1.png",
+                        mime="image/png",
+                    )
+        
+        with col2:
+            if st.button("📋 Generate F2 Top 3 Image"):
+                with st.spinner("Creating image..."):
+                    top3_image = export_top3_leaderboard("Section F2")
+                    st.download_button(
+                        label="💾 Download F2 Leaderboard Image",
+                        data=top3_image,
+                        file_name="beta_hunt_top3_F2.png",
+                        mime="image/png",
+                    )
         
         st.markdown("---")
         st.markdown("### Delete specific submissions")
