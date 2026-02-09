@@ -359,11 +359,11 @@ def export_top3_leaderboard(section: str) -> BytesIO:
     scores = compute_scores(rows)
     
     # Create figure
-    fig = plt.figure(figsize=(14, 11))
+    fig = plt.figure(figsize=(14, 10))
     fig.patch.set_facecolor('white')
     
-    # Title
-    fig.text(0.5, 0.97, f"{section} - Beta Hunt Leaderboard", 
+    # Title with more space
+    fig.text(0.5, 0.98, f"{section} - Beta Hunt Leaderboard", 
              ha='center', va='top', fontsize=18, fontweight='bold', color='#099DDD')
     
     # Create 4 subplots for the 4 tables
@@ -371,6 +371,13 @@ def export_top3_leaderboard(section: str) -> BytesIO:
     ax2 = plt.subplot(2, 2, 2)
     ax3 = plt.subplot(2, 2, 3)
     ax4 = plt.subplot(2, 2, 4)
+    
+    # Remove subplot frames/boxes
+    for ax in [ax1, ax2, ax3, ax4]:
+        ax.axis('tight')
+        ax.axis('off')
+        for spine in ax.spines.values():
+            spine.set_visible(False)
     
     # Table 1: Closest to 0
     table1_data = []
@@ -383,16 +390,15 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             f"{r.get('err0', 0):.4f}"
         ])
     
-    ax1.axis('tight')
-    ax1.axis('off')
+    ax1.set_title('🥇 Closest to Beta = 0', fontsize=12, fontweight='bold', pad=5)
     table1 = ax1.table(cellText=table1_data,
                       colLabels=['Rank', 'Name', 'Stock', 'Beta', 'Error'],
                       cellLoc='left',
-                      loc='center',
+                      loc='upper center',
                       colWidths=[0.1, 0.3, 0.2, 0.2, 0.2])
     table1.auto_set_font_size(False)
     table1.set_fontsize(10)
-    table1.scale(1, 2)
+    table1.scale(1, 1.8)
     
     # Style header
     for i in range(5):
@@ -405,8 +411,6 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             if i % 2 == 0:
                 table1[(i, j)].set_facecolor('#f0f0f0')
     
-    ax1.set_title('🥇 Closest to Beta = 0', fontsize=12, fontweight='bold', pad=10)
-    
     # Table 2: Closest to 1
     table2_data = []
     for i, r in enumerate(scores["near1"][:3]):
@@ -418,16 +422,15 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             f"{r.get('err1', 0):.4f}"
         ])
     
-    ax2.axis('tight')
-    ax2.axis('off')
+    ax2.set_title('🥈 Closest to Beta = 1', fontsize=12, fontweight='bold', pad=5)
     table2 = ax2.table(cellText=table2_data,
                       colLabels=['Rank', 'Name', 'Stock', 'Beta', 'Error'],
                       cellLoc='left',
-                      loc='center',
+                      loc='upper center',
                       colWidths=[0.1, 0.3, 0.2, 0.2, 0.2])
     table2.auto_set_font_size(False)
     table2.set_fontsize(10)
-    table2.scale(1, 2)
+    table2.scale(1, 1.8)
     
     for i in range(5):
         table2[(0, i)].set_facecolor('#099DDD')
@@ -437,8 +440,6 @@ def export_top3_leaderboard(section: str) -> BytesIO:
         for j in range(5):
             if i % 2 == 0:
                 table2[(i, j)].set_facecolor('#f0f0f0')
-    
-    ax2.set_title('🥈 Closest to Beta = 1', fontsize=12, fontweight='bold', pad=10)
     
     # Table 3: Highest Beta
     table3_data = []
@@ -450,16 +451,15 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             f"{r.get('beta_hi', 0):.4f}"
         ])
     
-    ax3.axis('tight')
-    ax3.axis('off')
+    ax3.set_title('🥉 Highest Beta', fontsize=12, fontweight='bold', pad=5)
     table3 = ax3.table(cellText=table3_data,
                       colLabels=['Rank', 'Name', 'Stock', 'Beta'],
                       cellLoc='left',
-                      loc='center',
+                      loc='upper center',
                       colWidths=[0.15, 0.4, 0.25, 0.2])
     table3.auto_set_font_size(False)
     table3.set_fontsize(10)
-    table3.scale(1, 2)
+    table3.scale(1, 1.8)
     
     for i in range(4):
         table3[(0, i)].set_facecolor('#099DDD')
@@ -469,8 +469,6 @@ def export_top3_leaderboard(section: str) -> BytesIO:
         for j in range(4):
             if i % 2 == 0:
                 table3[(i, j)].set_facecolor('#f0f0f0')
-    
-    ax3.set_title('🥉 Highest Beta', fontsize=12, fontweight='bold', pad=10)
     
     # Table 4: Overall
     table4_data = []
@@ -484,16 +482,15 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             r.get('total_rank', 0)
         ])
     
-    ax4.axis('tight')
-    ax4.axis('off')
+    ax4.set_title('🏆 Overall (Sum of Ranks)', fontsize=12, fontweight='bold', pad=5)
     table4 = ax4.table(cellText=table4_data,
                       colLabels=['Rank', 'Name', 'Near 0', 'Near 1', 'High β', 'Total'],
                       cellLoc='left',
-                      loc='center',
+                      loc='upper center',
                       colWidths=[0.1, 0.3, 0.15, 0.15, 0.15, 0.15])
     table4.auto_set_font_size(False)
     table4.set_fontsize(10)
-    table4.scale(1, 2)
+    table4.scale(1, 1.8)
     
     for i in range(6):
         table4[(0, i)].set_facecolor('#099DDD')
@@ -504,12 +501,10 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             if i % 2 == 0:
                 table4[(i, j)].set_facecolor('#f0f0f0')
     
-    ax4.set_title('🏆 Overall (Sum of Ranks)', fontsize=12, fontweight='bold', pad=10)
-    
-    # Save to BytesIO
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    # Save to BytesIO with adjusted spacing
+    plt.subplots_adjust(top=0.93, hspace=0.4, wspace=0.3)
     output = BytesIO()
-    plt.savefig(output, format='png', dpi=200, bbox_inches='tight', facecolor='white')
+    plt.savefig(output, format='png', dpi=200, bbox_inches='tight', facecolor='white', pad_inches=0.3)
     plt.close(fig)
     output.seek(0)
     return output
