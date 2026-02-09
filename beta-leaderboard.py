@@ -1,4 +1,15 @@
-# streamlit_app.py
+try:
+        # supabase-py v2 signature supports bytes and file_options
+        sb.storage.from_(bucket).upload(
+            path=path,
+            file=data,
+            file_options={"content-type": mime or "application/octet-stream", "x-upsert": "true"},
+        )
+        return sb.storage.from_(bucket).get_public_url(path)
+    except Exception as e:
+        # Provide helpful error message
+        error_msg = str(e)
+        if "not found" in error_msg.lower():# streamlit_app.py
 # ---
 # "Beta Hunt" – Streamlit classroom app
 # Students submit three stocks: beta ≈ 0, beta ≈ 1, and highest beta they can find.
@@ -24,12 +35,16 @@
 #   team TEXT NOT NULL,
 #   student_name TEXT,
 #   email TEXT,
+#   section TEXT,
 #   stock0 TEXT,      beta0 DOUBLE PRECISION,
 #   stock1 TEXT,      beta1 DOUBLE PRECISION,
 #   stock_hi TEXT,    beta_hi DOUBLE PRECISION,
 #   shot0_url TEXT, shot1_url TEXT, shothi_url TEXT,
 #   notes TEXT
 # );
+#
+# If your table already exists, add the section column:
+# ALTER TABLE public.submissions ADD COLUMN IF NOT EXISTS section TEXT;
 # ------------------------------
 
 from __future__ import annotations
@@ -143,6 +158,40 @@ def validate_betas(beta0, beta1, betahi) -> List[str]:
     return errs
 
 
+def validate_file_uploads(shot0, shot1, shothi) -> List[str]:
+    """Validate uploaded files for size and type."""
+    max_size_mb = 5  # 5MB limit per file
+    max_size_bytes = max_size_mb * 1024 * 1024
+    
+    errors = []
+    for label, file in [("Near 0 screenshot", shot0), ("Near 1 screenshot", shot1), ("Highest beta screenshot", shothi)]:
+        if file:
+            file_size = getattr(file, "size", 0)
+            if file_size > max_size_bytes:
+                errors.append(f"{label} is too large ({file_size / 1024 / 1024:.1f}MB). Maximum size is {max_size_mb}MB.")
+            if file_size == 0:
+                errors.append(f"{label} appears to be empty.")
+    
+    return errors
+
+
+def validate_file_uploads(shot0, shot1, shothi):
+    """Validate uploaded files for size and type."""
+    max_size_mb = 5  # 5MB limit per file
+    max_size_bytes = max_size_mb * 1024 * 1024
+    
+    errors = []
+    for label, file in [("Near 0 screenshot", shot0), ("Near 1 screenshot", shot1), ("Highest beta screenshot", shothi)]:
+        if file:
+            file_size = getattr(file, "size", 0)
+            if file_size > max_size_bytes:
+                errors.append(f"{label} is too large ({file_size / 1024 / 1024:.1f}MB). Maximum size is {max_size_mb}MB.")
+            if file_size == 0:
+                errors.append(f"{label} appears to be empty.")
+    
+    return errors
+
+
 def upload_to_storage(sb: Client, file, path: str, bucket: str) -> str:
     """Upload the file-like to Supabase Storage and return a public URL.
     Keeps the correct extension for PNG/JPG/PDF and uses upsert for resubmits.
@@ -176,13 +225,20 @@ def upload_to_storage(sb: Client, file, path: str, bucket: str) -> str:
         return sb.storage.from_(bucket).get_public_url(path)
     except Exception as e:
         # Provide helpful error message
-        error_msg = str(e)
-        if "not found" in error_msg.lower():
+        error_msg = str(e).lower()
+        if "not found" in error_msg:
             st.error(f"❌ Storage bucket '{bucket}' doesn't exist. Please create it in Supabase Dashboard → Storage.")
-        elif "permission" in error_msg.lower() or "unauthorized" in error_msg.lower():
+        elif "permission" in error_msg or "unauthorized" in error_msg:
             st.error(f"❌ Permission denied. Make sure your bucket '{bucket}' has RLS policies allowing uploads.")
+        elif "timeout" in error_msg or "connection" in error_msg or "network" in error_msg:
+            st.error(f"❌ Upload failed due to connection timeout. This usually means the file is too large or your connection is unstable.")
+            st.info("💡 Try:\n- Using a smaller file (compress or crop your screenshot)\n- Checking your internet connection\n- Trying again in a few moments")
+        elif "payload too large" in error_msg or "413" in error_msg:
+            st.error(f"❌ File is too large for upload. Maximum file size is 5MB.")
+            st.info("💡 Please compress or crop your screenshot to make it smaller.")
         else:
             st.error(f"❌ Upload failed: {error_msg}")
+            st.info("If this persists, please contact your instructor.")
         st.stop()
 
 
@@ -237,6 +293,22 @@ def fetch_latest_by_team() -> List[Dict[str, Any]]:
     return list(latest.values())
 
 
+def fetch_latest_by_section(section: str) -> List[Dict[str, Any]]:
+    """Fetch latest submissions filtered by section."""
+    sb = get_client()
+    _, table, _ = get_storage_cfg()
+    res = sb.table(table).select("*").eq("section", section).order("created_at", desc=True).execute()
+    rows = res.data or []
+
+    # Keep only the most recent per team within this section
+    latest = {}
+    for r in rows:
+        t = (r.get("team") or "").strip()
+        if t and t not in latest:
+            latest[t] = r
+    return list(latest.values())
+
+
 def fetch_all_submissions() -> List[Dict[str, Any]]:
     """Fetch all submissions (not just latest per team) for export."""
     sb = get_client()
@@ -254,6 +326,7 @@ def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
             "Submitted": r.get("created_at"),
             "Name": r.get("student_name"),
             "Email": r.get("email"),
+            "Section": r.get("section"),
             "Stock (Near 0)": r.get("stock0"),
             "Beta (Near 0)": r.get("beta0"),
             "Screenshot URL (Near 0)": r.get("shot0_url"),
@@ -276,11 +349,11 @@ def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
         # Get the worksheet to add hyperlinks
         worksheet = writer.sheets['Submissions']
         
-        # Find URL columns (columns F, I, L - indices 6, 9, 12 in 1-based)
+        # Find URL columns (columns G, J, M - adjusted for new Section column)
         url_columns = {
-            'F': 'Screenshot URL (Near 0)',
-            'I': 'Screenshot URL (Near 1)', 
-            'L': 'Screenshot URL (Highest)'
+            'G': 'Screenshot URL (Near 0)',
+            'J': 'Screenshot URL (Near 1)', 
+            'M': 'Screenshot URL (Highest)'
         }
         
         # Convert URLs to hyperlinks (start from row 2, skip header)
@@ -354,6 +427,7 @@ with submit_tab:
     with st.form("submission_form", clear_on_submit=False):
         student_name = st.text_input("Your name *")
         email = st.text_input("Email *")
+        section = st.selectbox("Section *", options=["Section F1", "Section F2"])
 
         st.markdown("---")
         st.markdown("**1) Near 0 beta**")
@@ -398,6 +472,9 @@ with submit_tab:
         if not validate_email(email):
             st.error("Please enter a valid email address (e.g., student@university.edu).")
             st.stop()
+        if not section:
+            st.error("Please select your section.")
+            st.stop()
         
         # Check if this email has already submitted
         sb = get_client()
@@ -423,6 +500,22 @@ with submit_tab:
             st.error("Please upload a screenshot for the highest beta stock.")
             st.stop()
         
+        # Validate file sizes
+        file_errors = validate_file_uploads(shot0, shot1, shothi)
+        if file_errors:
+            for err in file_errors:
+                st.error(err)
+            st.info("💡 **Tip:** If your screenshots are too large, try:\n- Taking a new screenshot at lower resolution\n- Compressing the image using a free tool like TinyPNG\n- Converting PNG to JPG (usually smaller)\n- Cropping to show only the relevant beta information")
+            st.stop()
+        
+        # Validate file sizes
+        file_errors = validate_file_uploads(shot0, shot1, shothi)
+        if file_errors:
+            for err in file_errors:
+                st.error(err)
+            st.info("💡 **Tip:** If your screenshots are too large, try:\n- Taking a new screenshot at lower resolution\n- Compressing the image using a free tool\n- Converting to JPG instead of PNG\n- Cropping to show only the relevant information")
+            st.stop()
+        
         b0 = _safe_float(beta0)
         b1 = _safe_float(beta1)
         bhi = _safe_float(beta_hi)
@@ -438,6 +531,7 @@ with submit_tab:
                 team=(email or "").strip().lower(),
                 student_name=student_name,
                 email=email,
+                section=section,
                 row={
                     "stock0": stock0,
                     "beta0": b0,
@@ -477,57 +571,116 @@ with leaderboard_tab:
         except Exception:
             st.experimental_rerun()
 
-    rows = fetch_latest_by_team()
-    scores = compute_scores(rows)
+    # Create tabs for each section
+    f1_tab, f2_tab = st.tabs(["Section F1", "Section F2"])
+    
+    with f1_tab:
+        st.markdown("#### Section F1 Rankings")
+        rows_f1 = fetch_latest_by_section("Section F1")
+        scores_f1 = compute_scores(rows_f1)
+        
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown("### 🥇 Closest to 0")
+            data = [{
+                "Rank": i+1,
+                "Name": r.get("student_name"),
+                "Stock": r.get("stock0"),
+                "Beta": r.get("beta0"),
+                "Error": round(r.get("err0"), 4) if r.get("err0") is not None else None,
+                "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
+            } for i, r in enumerate(scores_f1["near0"][:10])]
+            st.dataframe(data, use_container_width=True, hide_index=True)
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown("### 🥇 Closest to 0")
+        with c2:
+            st.markdown("### 🥈 Closest to 1")
+            data = [{
+                "Rank": i+1,
+                "Name": r.get("student_name"),
+                "Stock": r.get("stock1"),
+                "Beta": r.get("beta1"),
+                "Error": round(r.get("err1"), 4) if r.get("err1") is not None else None,
+                "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
+            } for i, r in enumerate(scores_f1["near1"][:10])]
+            st.dataframe(data, use_container_width=True, hide_index=True)
+
+        with c3:
+            st.markdown("### 🥉 Highest beta")
+            data = [{
+                "Rank": i+1,
+                "Name": r.get("student_name"),
+                "Stock": r.get("stock_hi"),
+                "Beta": r.get("beta_hi"),
+                "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
+            } for i, r in enumerate(scores_f1["high"][:10])]
+            st.dataframe(data, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown("### Overall (sum of ranks)")
         data = [{
             "Rank": i+1,
             "Name": r.get("student_name"),
-            "Stock": r.get("stock0"),
-            "Beta": r.get("beta0"),
-            "Error": round(r.get("err0"), 4) if r.get("err0") is not None else None,
+            "Near 0 rank": r.get("rank0"),
+            "Near 1 rank": r.get("rank1"),
+            "High beta rank": r.get("rankh"),
+            "Total": r.get("total_rank"),
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
-        } for i, r in enumerate(scores["near0"][:10])]
+        } for i, r in enumerate(scores_f1["overall"][:20])]
         st.dataframe(data, use_container_width=True, hide_index=True)
+    
+    with f2_tab:
+        st.markdown("#### Section F2 Rankings")
+        rows_f2 = fetch_latest_by_section("Section F2")
+        scores_f2 = compute_scores(rows_f2)
+        
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown("### 🥇 Closest to 0")
+            data = [{
+                "Rank": i+1,
+                "Name": r.get("student_name"),
+                "Stock": r.get("stock0"),
+                "Beta": r.get("beta0"),
+                "Error": round(r.get("err0"), 4) if r.get("err0") is not None else None,
+                "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
+            } for i, r in enumerate(scores_f2["near0"][:10])]
+            st.dataframe(data, use_container_width=True, hide_index=True)
 
-    with c2:
-        st.markdown("### 🥈 Closest to 1")
+        with c2:
+            st.markdown("### 🥈 Closest to 1")
+            data = [{
+                "Rank": i+1,
+                "Name": r.get("student_name"),
+                "Stock": r.get("stock1"),
+                "Beta": r.get("beta1"),
+                "Error": round(r.get("err1"), 4) if r.get("err1") is not None else None,
+                "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
+            } for i, r in enumerate(scores_f2["near1"][:10])]
+            st.dataframe(data, use_container_width=True, hide_index=True)
+
+        with c3:
+            st.markdown("### 🥉 Highest beta")
+            data = [{
+                "Rank": i+1,
+                "Name": r.get("student_name"),
+                "Stock": r.get("stock_hi"),
+                "Beta": r.get("beta_hi"),
+                "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
+            } for i, r in enumerate(scores_f2["high"][:10])]
+            st.dataframe(data, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown("### Overall (sum of ranks)")
         data = [{
             "Rank": i+1,
             "Name": r.get("student_name"),
-            "Stock": r.get("stock1"),
-            "Beta": r.get("beta1"),
-            "Error": round(r.get("err1"), 4) if r.get("err1") is not None else None,
+            "Near 0 rank": r.get("rank0"),
+            "Near 1 rank": r.get("rank1"),
+            "High beta rank": r.get("rankh"),
+            "Total": r.get("total_rank"),
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
-        } for i, r in enumerate(scores["near1"][:10])]
+        } for i, r in enumerate(scores_f2["overall"][:20])]
         st.dataframe(data, use_container_width=True, hide_index=True)
-
-    with c3:
-        st.markdown("### 🥉 Highest beta")
-        data = [{
-            "Rank": i+1,
-            "Name": r.get("student_name"),
-            "Stock": r.get("stock_hi"),
-            "Beta": r.get("beta_hi"),
-            "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
-        } for i, r in enumerate(scores["high"][:10])]
-        st.dataframe(data, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-    st.markdown("### Overall (sum of ranks)")
-    data = [{
-        "Rank": i+1,
-        "Name": r.get("student_name"),
-        "Near 0 rank": r.get("rank0"),
-        "Near 1 rank": r.get("rank1"),
-        "High beta rank": r.get("rankh"),
-        "Total": r.get("total_rank"),
-        "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
-    } for i, r in enumerate(scores["overall"][:20])]
-    st.dataframe(data, use_container_width=True, hide_index=True)
 
 with admin_tab:
     st.subheader("Admin tools")
