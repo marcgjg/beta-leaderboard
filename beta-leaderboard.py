@@ -354,76 +354,162 @@ def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
 
 
 def export_top3_leaderboard(section: str) -> BytesIO:
-    """Export top 3 for each category as an image."""
+    """Export top 3 for each category as a table-style image."""
     rows = fetch_latest_by_section(section)
     scores = compute_scores(rows)
     
-    # Create figure with white background
-    fig, ax = plt.subplots(figsize=(12, 10))
+    # Create figure
+    fig = plt.figure(figsize=(14, 11))
     fig.patch.set_facecolor('white')
-    ax.axis('off')
     
     # Title
-    title_text = f"{section} - Beta Hunt Leaderboard"
-    ax.text(0.5, 0.95, title_text, ha='center', va='top', fontsize=20, fontweight='bold', color='#099DDD')
+    fig.text(0.5, 0.97, f"{section} - Beta Hunt Leaderboard", 
+             ha='center', va='top', fontsize=18, fontweight='bold', color='#099DDD')
     
-    y_position = 0.88
+    # Create 4 subplots for the 4 tables
+    ax1 = plt.subplot(2, 2, 1)
+    ax2 = plt.subplot(2, 2, 2)
+    ax3 = plt.subplot(2, 2, 3)
+    ax4 = plt.subplot(2, 2, 4)
     
-    # Category 1: Closest to 0
-    ax.text(0.5, y_position, "🥇 Closest to Beta = 0", ha='center', va='top', fontsize=16, fontweight='bold')
-    y_position -= 0.05
+    # Table 1: Closest to 0
+    table1_data = []
     for i, r in enumerate(scores["near0"][:3]):
-        name = r.get('student_name', 'N/A')
-        stock = r.get('stock0', 'N/A')
-        beta = r.get('beta0', 0)
-        error = r.get('err0', 0)
-        text = f"{i+1}. {name} - {stock} (β = {beta:.4f}, Error: {error:.4f})"
-        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
-        y_position -= 0.04
+        table1_data.append([
+            i+1,
+            r.get('student_name', 'N/A'),
+            r.get('stock0', 'N/A'),
+            f"{r.get('beta0', 0):.4f}",
+            f"{r.get('err0', 0):.4f}"
+        ])
     
-    y_position -= 0.03
+    ax1.axis('tight')
+    ax1.axis('off')
+    table1 = ax1.table(cellText=table1_data,
+                      colLabels=['Rank', 'Name', 'Stock', 'Beta', 'Error'],
+                      cellLoc='left',
+                      loc='center',
+                      colWidths=[0.1, 0.3, 0.2, 0.2, 0.2])
+    table1.auto_set_font_size(False)
+    table1.set_fontsize(10)
+    table1.scale(1, 2)
     
-    # Category 2: Closest to 1
-    ax.text(0.5, y_position, "🥈 Closest to Beta = 1", ha='center', va='top', fontsize=16, fontweight='bold')
-    y_position -= 0.05
+    # Style header
+    for i in range(5):
+        table1[(0, i)].set_facecolor('#099DDD')
+        table1[(0, i)].set_text_props(weight='bold', color='white')
+    
+    # Alternate row colors
+    for i in range(1, len(table1_data) + 1):
+        for j in range(5):
+            if i % 2 == 0:
+                table1[(i, j)].set_facecolor('#f0f0f0')
+    
+    ax1.set_title('🥇 Closest to Beta = 0', fontsize=12, fontweight='bold', pad=10)
+    
+    # Table 2: Closest to 1
+    table2_data = []
     for i, r in enumerate(scores["near1"][:3]):
-        name = r.get('student_name', 'N/A')
-        stock = r.get('stock1', 'N/A')
-        beta = r.get('beta1', 0)
-        error = r.get('err1', 0)
-        text = f"{i+1}. {name} - {stock} (β = {beta:.4f}, Error: {error:.4f})"
-        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
-        y_position -= 0.04
+        table2_data.append([
+            i+1,
+            r.get('student_name', 'N/A'),
+            r.get('stock1', 'N/A'),
+            f"{r.get('beta1', 0):.4f}",
+            f"{r.get('err1', 0):.4f}"
+        ])
     
-    y_position -= 0.03
+    ax2.axis('tight')
+    ax2.axis('off')
+    table2 = ax2.table(cellText=table2_data,
+                      colLabels=['Rank', 'Name', 'Stock', 'Beta', 'Error'],
+                      cellLoc='left',
+                      loc='center',
+                      colWidths=[0.1, 0.3, 0.2, 0.2, 0.2])
+    table2.auto_set_font_size(False)
+    table2.set_fontsize(10)
+    table2.scale(1, 2)
     
-    # Category 3: Highest Beta
-    ax.text(0.5, y_position, "🥉 Highest Beta", ha='center', va='top', fontsize=16, fontweight='bold')
-    y_position -= 0.05
+    for i in range(5):
+        table2[(0, i)].set_facecolor('#099DDD')
+        table2[(0, i)].set_text_props(weight='bold', color='white')
+    
+    for i in range(1, len(table2_data) + 1):
+        for j in range(5):
+            if i % 2 == 0:
+                table2[(i, j)].set_facecolor('#f0f0f0')
+    
+    ax2.set_title('🥈 Closest to Beta = 1', fontsize=12, fontweight='bold', pad=10)
+    
+    # Table 3: Highest Beta
+    table3_data = []
     for i, r in enumerate(scores["high"][:3]):
-        name = r.get('student_name', 'N/A')
-        stock = r.get('stock_hi', 'N/A')
-        beta = r.get('beta_hi', 0)
-        text = f"{i+1}. {name} - {stock} (β = {beta:.4f})"
-        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
-        y_position -= 0.04
+        table3_data.append([
+            i+1,
+            r.get('student_name', 'N/A'),
+            r.get('stock_hi', 'N/A'),
+            f"{r.get('beta_hi', 0):.4f}"
+        ])
     
-    y_position -= 0.03
+    ax3.axis('tight')
+    ax3.axis('off')
+    table3 = ax3.table(cellText=table3_data,
+                      colLabels=['Rank', 'Name', 'Stock', 'Beta'],
+                      cellLoc='left',
+                      loc='center',
+                      colWidths=[0.15, 0.4, 0.25, 0.2])
+    table3.auto_set_font_size(False)
+    table3.set_fontsize(10)
+    table3.scale(1, 2)
     
-    # Overall Top 3
-    ax.text(0.5, y_position, "🏆 Overall Top 3 (Sum of Ranks)", ha='center', va='top', fontsize=16, fontweight='bold')
-    y_position -= 0.05
+    for i in range(4):
+        table3[(0, i)].set_facecolor('#099DDD')
+        table3[(0, i)].set_text_props(weight='bold', color='white')
+    
+    for i in range(1, len(table3_data) + 1):
+        for j in range(4):
+            if i % 2 == 0:
+                table3[(i, j)].set_facecolor('#f0f0f0')
+    
+    ax3.set_title('🥉 Highest Beta', fontsize=12, fontweight='bold', pad=10)
+    
+    # Table 4: Overall
+    table4_data = []
     for i, r in enumerate(scores["overall"][:3]):
-        name = r.get('student_name', 'N/A')
-        total = r.get('total_rank', 0)
-        text = f"{i+1}. {name} (Total: {total} points)"
-        ax.text(0.1, y_position, text, ha='left', va='top', fontsize=12)
-        y_position -= 0.04
+        table4_data.append([
+            i+1,
+            r.get('student_name', 'N/A'),
+            r.get('rank0', '-'),
+            r.get('rank1', '-'),
+            r.get('rankh', '-'),
+            r.get('total_rank', 0)
+        ])
+    
+    ax4.axis('tight')
+    ax4.axis('off')
+    table4 = ax4.table(cellText=table4_data,
+                      colLabels=['Rank', 'Name', 'Near 0', 'Near 1', 'High β', 'Total'],
+                      cellLoc='left',
+                      loc='center',
+                      colWidths=[0.1, 0.3, 0.15, 0.15, 0.15, 0.15])
+    table4.auto_set_font_size(False)
+    table4.set_fontsize(10)
+    table4.scale(1, 2)
+    
+    for i in range(6):
+        table4[(0, i)].set_facecolor('#099DDD')
+        table4[(0, i)].set_text_props(weight='bold', color='white')
+    
+    for i in range(1, len(table4_data) + 1):
+        for j in range(6):
+            if i % 2 == 0:
+                table4[(i, j)].set_facecolor('#f0f0f0')
+    
+    ax4.set_title('🏆 Overall (Sum of Ranks)', fontsize=12, fontweight='bold', pad=10)
     
     # Save to BytesIO
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     output = BytesIO()
-    plt.tight_layout()
-    plt.savefig(output, format='png', dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(output, format='png', dpi=200, bbox_inches='tight', facecolor='white')
     plt.close(fig)
     output.seek(0)
     return output
