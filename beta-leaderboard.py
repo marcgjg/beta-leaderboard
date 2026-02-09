@@ -358,7 +358,7 @@ def export_top3_leaderboard(section: str) -> BytesIO:
     
     # Image settings
     width = 1600
-    height = 800
+    height = 700
     bg_color = (255, 255, 255)
     brand_color = (9, 155, 221)
     header_bg = brand_color
@@ -384,7 +384,7 @@ def export_top3_leaderboard(section: str) -> BytesIO:
     title_text = f"{section} - Beta Hunt Leaderboard"
     title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
     title_width = title_bbox[2] - title_bbox[0]
-    draw.text(((width - title_width) // 2, 20), title_text, fill=brand_color, font=title_font)
+    draw.text(((width - title_width) // 2, 15), title_text, fill=brand_color, font=title_font)
     
     # Helper function to draw a table
     def draw_table(x, y, title, headers, data, col_widths):
@@ -394,11 +394,11 @@ def export_top3_leaderboard(section: str) -> BytesIO:
         title_bbox = draw.textbbox((0, 0), title, font=header_font)
         title_w = title_bbox[2] - title_bbox[0]
         draw.text((x + (sum(col_widths) - title_w) // 2, current_y), title, fill=(0, 0, 0), font=header_font)
-        current_y += 30
+        current_y += 28
         
         # Draw header row
         current_x = x
-        row_height = 32
+        row_height = 30
         for i, (header, col_w) in enumerate(zip(headers, col_widths)):
             # Header background
             draw.rectangle([current_x, current_y, current_x + col_w, current_y + row_height], 
@@ -443,7 +443,7 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             f"{r.get('beta0', 0):.4f}",
             f"{r.get('err0', 0):.4f}"
         ])
-    draw_table(50, 80, "Closest to Beta = 0", 
+    draw_table(50, 70, "Closest to Beta = 0", 
               ["Rank", "Name", "Stock", "Beta", "Error"],
               table1_data, [60, 200, 100, 100, 100])
     
@@ -457,11 +457,11 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             f"{r.get('beta1', 0):.4f}",
             f"{r.get('err1', 0):.4f}"
         ])
-    draw_table(840, 80, "Closest to Beta = 1",
+    draw_table(840, 70, "Closest to Beta = 1",
               ["Rank", "Name", "Stock", "Beta", "Error"],
               table2_data, [60, 200, 100, 100, 100])
     
-    # Table 3: Highest Beta (bottom left) - much tighter spacing
+    # Table 3: Highest Beta (bottom left) - minimal spacing
     table3_data = []
     for i, r in enumerate(scores["high"][:3]):
         table3_data.append([
@@ -470,11 +470,11 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             r.get('stock_hi', 'N/A'),
             f"{r.get('beta_hi', 0):.4f}"
         ])
-    draw_table(50, 380, "Highest Beta",
+    draw_table(50, 310, "Highest Beta",
               ["Rank", "Name", "Stock", "Beta"],
               table3_data, [60, 240, 120, 100])
     
-    # Table 4: Overall (bottom right) - much tighter spacing
+    # Table 4: Overall (bottom right) - minimal spacing
     table4_data = []
     for i, r in enumerate(scores["overall"][:3]):
         table4_data.append([
@@ -485,7 +485,7 @@ def export_top3_leaderboard(section: str) -> BytesIO:
             r.get('rankh', '-'),
             r.get('total_rank', 0)
         ])
-    draw_table(840, 380, "Overall (Sum of Ranks)",
+    draw_table(840, 310, "Overall (Sum of Ranks)",
               ["Rank", "Name", "Near 0", "Near 1", "High Beta", "Total"],
               table4_data, [60, 180, 80, 80, 80, 80])
     
