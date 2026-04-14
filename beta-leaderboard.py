@@ -1,4 +1,4 @@
-# streamlit_app.py
+# streamlit_app.py 
 # ---
 # "Beta Hunt" – Streamlit classroom app
 # Students submit three stocks: beta ≈ 0, beta ≈ 1, and highest beta they can find.
