@@ -81,16 +81,6 @@ def get_client() -> Client:
 
 def check_database_health():
     """Check if Supabase is accessible and not paused."""
-    # TEMP DEBUG: show a masked version of the key currently loaded from Secrets,
-    # so we can confirm Streamlit is using the value we think it is.
-    cfg = st.secrets.get("supabase", {})
-    raw_key = cfg.get("key", "")
-    if raw_key:
-        masked = f"{raw_key[:10]}...{raw_key[-6:]} (length {len(raw_key)})"
-    else:
-        masked = "(no key found in secrets!)"
-    st.info(f"🔍 DEBUG — key currently loaded from Secrets: `{masked}`")
-
     try:
         sb = get_client()
         _, table, _ = get_storage_cfg()
@@ -112,13 +102,9 @@ def check_database_health():
             
             Your data is safe and will be restored!
             """)
-            st.markdown("**🔍 Raw error (debug):**")
-            st.code(f"Type: {type(e).__name__}\n\n{str(e)}")
             st.stop()
         else:
             st.error(f"❌ Database connection error: {e}")
-            st.markdown("**🔍 Raw error (debug):**")
-            st.code(f"Type: {type(e).__name__}\n\n{str(e)}")
             st.stop()
         return False
 
