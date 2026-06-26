@@ -552,7 +552,7 @@ with submit_tab:
     with st.form("submission_form", clear_on_submit=False):
         student_name = st.text_input("Your name *")
         email = st.text_input("Email *")
-        section = st.selectbox("Section *", options=["-- Select your section --", "Section F1", "Section F2"])
+        section = st.selectbox("Section *", options=["-- Select your section --", "Section S1", "Section S2"])
 
         st.markdown("---")
         st.markdown("**1) Near 0 beta**")
@@ -598,7 +598,7 @@ with submit_tab:
             st.error("Please enter a valid email address (e.g., student@university.edu).")
             st.stop()
         if not section or section == "-- Select your section --":
-            st.error("Please select your section (F1 or F2).")
+            st.error("Please select your section (S1 or S2).")
             st.stop()
         
         # Check if this email has already submitted
@@ -689,11 +689,11 @@ with leaderboard_tab:
             st.experimental_rerun()
 
     # Create tabs for each section
-    f1_tab, f2_tab = st.tabs(["Section F1", "Section F2"])
+    f1_tab, f2_tab = st.tabs(["Section S1", "Section S2"])
     
     with f1_tab:
-        st.markdown("#### Section F1 Rankings")
-        rows_f1 = fetch_latest_by_section("Section F1")
+        st.markdown("#### Section S1 Rankings")
+        rows_f1 = fetch_latest_by_section("Section S1")
         scores_f1 = compute_scores(rows_f1)
         
         c1, c2, c3 = st.columns(3)
@@ -746,8 +746,8 @@ with leaderboard_tab:
         st.dataframe(data, use_container_width=True, hide_index=True)
     
     with f2_tab:
-        st.markdown("#### Section F2 Rankings")
-        rows_f2 = fetch_latest_by_section("Section F2")
+        st.markdown("#### Section S2 Rankings")
+        rows_f2 = fetch_latest_by_section("Section S2")
         scores_f2 = compute_scores(rows_f2)
         
         c1, c2, c3 = st.columns(3)
@@ -830,24 +830,24 @@ with admin_tab:
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("📋 Generate F1 Top 3 Image"):
+            if st.button("📋 Generate S1 Top 3 Image"):
                 with st.spinner("Creating image..."):
-                    top3_image = export_top3_leaderboard("Section F1")
+                    top3_image = export_top3_leaderboard("Section S1")
                     st.download_button(
-                        label="💾 Download F1 Leaderboard Image",
+                        label="💾 Download S1 Leaderboard Image",
                         data=top3_image,
-                        file_name="beta_hunt_top3_F1.png",
+                        file_name="beta_hunt_top3_S1.png",
                         mime="image/png",
                     )
         
         with col2:
-            if st.button("📋 Generate F2 Top 3 Image"):
+            if st.button("📋 Generate S2 Top 3 Image"):
                 with st.spinner("Creating image..."):
-                    top3_image = export_top3_leaderboard("Section F2")
+                    top3_image = export_top3_leaderboard("Section S2")
                     st.download_button(
-                        label="💾 Download F2 Leaderboard Image",
+                        label="💾 Download S2 Leaderboard Image",
                         data=top3_image,
-                        file_name="beta_hunt_top3_F2.png",
+                        file_name="beta_hunt_top3_S2.png",
                         mime="image/png",
                     )
         
