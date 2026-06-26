@@ -112,13 +112,13 @@ def check_database_health():
             
             Your data is safe and will be restored!
             """)
-            with st.expander("🔍 Raw error (debug)"):
-                st.code(str(e))
+            st.markdown("**🔍 Raw error (debug):**")
+            st.code(f"Type: {type(e).__name__}\n\n{str(e)}")
             st.stop()
         else:
             st.error(f"❌ Database connection error: {e}")
-            with st.expander("🔍 Raw error (debug)"):
-                st.code(str(e))
+            st.markdown("**🔍 Raw error (debug):**")
+            st.code(f"Type: {type(e).__name__}\n\n{str(e)}")
             st.stop()
         return False
 
