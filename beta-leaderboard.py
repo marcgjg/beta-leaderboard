@@ -555,6 +555,7 @@ with submit_tab:
         section = st.selectbox("Section *", options=["-- Select your section --", "Section S1", "Section S2"])
 
         st.markdown("---")
+        st.info("ℹ️ Betas must be in the range of −5 to 20.")
         st.markdown("**1) Near 0 beta**")
         c1, c2, c3 = st.columns([2,1,2])
         with c1:
