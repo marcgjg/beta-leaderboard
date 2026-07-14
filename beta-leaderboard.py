@@ -746,10 +746,10 @@ with leaderboard_tab:
         data = [{
             "Rank": i+1,
             "Name": r.get("student_name"),
-            "Near 0 rank": r.get("rank0"),
-            "Near 1 rank": r.get("rank1"),
-            "High beta rank": r.get("rankh"),
-            "Total": r.get("total_rank"),
+            "Near 0 rank": int(r["rank0"]) if r.get("rank0") is not None else None,
+            "Near 1 rank": int(r["rank1"]) if r.get("rank1") is not None else None,
+            "High beta rank": int(r["rankh"]) if r.get("rankh") is not None else None,
+            "Total": int(r["total_rank"]) if r.get("total_rank") is not None else None,
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores_f1["overall"][:20])]
         safe_dataframe(data, use_container_width=True, hide_index=True)
@@ -800,10 +800,10 @@ with leaderboard_tab:
         data = [{
             "Rank": i+1,
             "Name": r.get("student_name"),
-            "Near 0 rank": r.get("rank0"),
-            "Near 1 rank": r.get("rank1"),
-            "High beta rank": r.get("rankh"),
-            "Total": r.get("total_rank"),
+            "Near 0 rank": int(r["rank0"]) if r.get("rank0") is not None else None,
+            "Near 1 rank": int(r["rank1"]) if r.get("rank1") is not None else None,
+            "High beta rank": int(r["rankh"]) if r.get("rankh") is not None else None,
+            "Total": int(r["total_rank"]) if r.get("total_rank") is not None else None,
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores_f2["overall"][:20])]
         safe_dataframe(data, use_container_width=True, hide_index=True)
