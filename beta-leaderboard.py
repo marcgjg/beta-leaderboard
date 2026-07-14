@@ -526,6 +526,14 @@ def compute_scores(rows: List[Dict[str, Any]]):
 
     return {"near0": near0, "near1": near1, "high": high, "overall": overall}
 
+def safe_dataframe(data, **kwargs):
+    """Render a dataframe, but show a placeholder when data is empty
+    to avoid passing an empty list to pyarrow (which can segfault)."""
+    if data:
+        st.dataframe(data, **kwargs)
+    else:
+        st.caption("No submissions yet.")
+
 # ---------- UI ----------
 st.set_page_config(page_title="Beta Hunt – Leaderboard", page_icon="📈", layout="wide")
 st.title(APP_TITLE)
@@ -708,7 +716,7 @@ with leaderboard_tab:
                 "Error": round(float(r["err0"]), 4) if r.get("err0") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["near0"][:10])]
-            st.dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, use_container_width=True, hide_index=True)
 
         with c2:
             st.markdown("### 🥈 Closest to 1")
@@ -720,7 +728,7 @@ with leaderboard_tab:
                 "Error": round(float(r["err1"]), 4) if r.get("err1") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["near1"][:10])]
-            st.dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, use_container_width=True, hide_index=True)
 
         with c3:
             st.markdown("### 🥉 Highest beta")
@@ -731,7 +739,7 @@ with leaderboard_tab:
                 "Beta": float(r["beta_hi"]) if r.get("beta_hi") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["high"][:10])]
-            st.dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, use_container_width=True, hide_index=True)
 
         st.markdown("---")
         st.markdown("### Overall (sum of ranks)")
@@ -744,7 +752,7 @@ with leaderboard_tab:
             "Total": r.get("total_rank"),
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores_f1["overall"][:20])]
-        st.dataframe(data, use_container_width=True, hide_index=True)
+        safe_dataframe(data, use_container_width=True, hide_index=True)
     
     with f2_tab:
         st.markdown("#### Section S2 Rankings")
@@ -762,7 +770,7 @@ with leaderboard_tab:
                 "Error": round(float(r["err0"]), 4) if r.get("err0") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["near0"][:10])]
-            st.dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, use_container_width=True, hide_index=True)
 
         with c2:
             st.markdown("### 🥈 Closest to 1")
@@ -774,7 +782,7 @@ with leaderboard_tab:
                 "Error": round(float(r["err1"]), 4) if r.get("err1") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["near1"][:10])]
-            st.dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, use_container_width=True, hide_index=True)
 
         with c3:
             st.markdown("### 🥉 Highest beta")
@@ -785,7 +793,7 @@ with leaderboard_tab:
                 "Beta": float(r["beta_hi"]) if r.get("beta_hi") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["high"][:10])]
-            st.dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, use_container_width=True, hide_index=True)
 
         st.markdown("---")
         st.markdown("### Overall (sum of ranks)")
@@ -798,7 +806,7 @@ with leaderboard_tab:
             "Total": r.get("total_rank"),
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores_f2["overall"][:20])]
-        st.dataframe(data, use_container_width=True, hide_index=True)
+        safe_dataframe(data, use_container_width=True, hide_index=True)
 
 with admin_tab:
     st.subheader("Admin tools")
