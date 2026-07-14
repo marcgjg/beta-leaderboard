@@ -146,7 +146,7 @@ def validate_email(email: str) -> bool:
 
 def validate_betas(beta0, beta1, betahi) -> List[str]:
     errs = []
-    for label, val in [("beta near 0", beta0), ("beta near 1", beta1), ("highest beta", betahi)]:
+    for label, val in [("Beta near 0", beta0), ("Beta near 1", beta1), ("Highest beta", betahi)]:
         if val is None:
             errs.append(f"Please enter a numeric value for {label}.")
         elif val < BETA_MIN or val > BETA_MAX:
