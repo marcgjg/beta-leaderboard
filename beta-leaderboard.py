@@ -498,9 +498,9 @@ def export_top3_leaderboard(section: str) -> BytesIO:
 
 def compute_scores(rows: List[Dict[str, Any]]):
     for r in rows:
-        r["err0"] = None if r.get("beta0") is None else abs(r["beta0"] - TARGETS["near_zero"])
-        r["err1"] = None if r.get("beta1") is None else abs(r["beta1"] - TARGETS["near_one"])
-        r["hi_score"] = None if r.get("beta_hi") is None else r["beta_hi"]
+        r["err0"] = None if r.get("beta0") is None else abs(float(r["beta0"]) - TARGETS["near_zero"])
+        r["err1"] = None if r.get("beta1") is None else abs(float(r["beta1"]) - TARGETS["near_one"])
+        r["hi_score"] = None if r.get("beta_hi") is None else float(r["beta_hi"])
 
     near0 = [r for r in rows if r.get("err0") is not None]
     near1 = [r for r in rows if r.get("err1") is not None]
@@ -704,8 +704,8 @@ with leaderboard_tab:
                 "Rank": i+1,
                 "Name": r.get("student_name"),
                 "Stock": r.get("stock0"),
-                "Beta": r.get("beta0"),
-                "Error": round(r.get("err0"), 4) if r.get("err0") is not None else None,
+                "Beta": float(r["beta0"]) if r.get("beta0") is not None else None,
+                "Error": round(float(r["err0"]), 4) if r.get("err0") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["near0"][:10])]
             st.dataframe(data, use_container_width=True, hide_index=True)
@@ -716,8 +716,8 @@ with leaderboard_tab:
                 "Rank": i+1,
                 "Name": r.get("student_name"),
                 "Stock": r.get("stock1"),
-                "Beta": r.get("beta1"),
-                "Error": round(r.get("err1"), 4) if r.get("err1") is not None else None,
+                "Beta": float(r["beta1"]) if r.get("beta1") is not None else None,
+                "Error": round(float(r["err1"]), 4) if r.get("err1") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["near1"][:10])]
             st.dataframe(data, use_container_width=True, hide_index=True)
@@ -728,7 +728,7 @@ with leaderboard_tab:
                 "Rank": i+1,
                 "Name": r.get("student_name"),
                 "Stock": r.get("stock_hi"),
-                "Beta": r.get("beta_hi"),
+                "Beta": float(r["beta_hi"]) if r.get("beta_hi") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["high"][:10])]
             st.dataframe(data, use_container_width=True, hide_index=True)
@@ -758,8 +758,8 @@ with leaderboard_tab:
                 "Rank": i+1,
                 "Name": r.get("student_name"),
                 "Stock": r.get("stock0"),
-                "Beta": r.get("beta0"),
-                "Error": round(r.get("err0"), 4) if r.get("err0") is not None else None,
+                "Beta": float(r["beta0"]) if r.get("beta0") is not None else None,
+                "Error": round(float(r["err0"]), 4) if r.get("err0") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["near0"][:10])]
             st.dataframe(data, use_container_width=True, hide_index=True)
@@ -770,8 +770,8 @@ with leaderboard_tab:
                 "Rank": i+1,
                 "Name": r.get("student_name"),
                 "Stock": r.get("stock1"),
-                "Beta": r.get("beta1"),
-                "Error": round(r.get("err1"), 4) if r.get("err1") is not None else None,
+                "Beta": float(r["beta1"]) if r.get("beta1") is not None else None,
+                "Error": round(float(r["err1"]), 4) if r.get("err1") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["near1"][:10])]
             st.dataframe(data, use_container_width=True, hide_index=True)
@@ -782,7 +782,7 @@ with leaderboard_tab:
                 "Rank": i+1,
                 "Name": r.get("student_name"),
                 "Stock": r.get("stock_hi"),
-                "Beta": r.get("beta_hi"),
+                "Beta": float(r["beta_hi"]) if r.get("beta_hi") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["high"][:10])]
             st.dataframe(data, use_container_width=True, hide_index=True)
