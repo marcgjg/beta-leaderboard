@@ -527,26 +527,13 @@ def compute_scores(rows: List[Dict[str, Any]]):
     return {"near0": near0, "near1": near1, "high": high, "overall": overall}
 
 def safe_dataframe(data, **kwargs):
-    """Render a dataframe safely, avoiding pyarrow segfaults from raw Python
-    lists with mixed None/numeric types. Converts to a pandas DataFrame first
-    so pandas handles type coercion before pyarrow sees the data."""
+    """Render a table safely, bypassing pyarrow entirely by using st.table
+    (which uses protobuf serialisation instead of Arrow)."""
     if not data:
         st.caption("No submissions yet.")
         return
-    df = pd.DataFrame(data)
-    # Convert any column that mixes None with numerics to a nullable pandas
-    # dtype — this gives pyarrow a clean, consistent schema to work with.
-    for col in df.columns:
-        if df[col].isna().any():
-            try:
-                df[col] = pd.to_numeric(df[col], errors='ignore')
-                if pd.api.types.is_float_dtype(df[col]):
-                    df[col] = df[col].astype(pd.Float64Dtype())
-                elif pd.api.types.is_integer_dtype(df[col]):
-                    df[col] = df[col].astype(pd.Int64Dtype())
-            except Exception:
-                pass
-    st.dataframe(df, **kwargs)
+    df = pd.DataFrame(data).reset_index(drop=True)
+    st.table(df)
 
 # ---------- UI ----------
 st.set_page_config(page_title="Beta Hunt – Leaderboard", page_icon="📈", layout="wide")
@@ -895,4 +882,4 @@ with admin_tab:
             except Exception:
                 st.experimental_rerun()
     else:
-        st.info("Enter the admin passphrase to access exports 
+        st.info("Enter the admin passphrase to 
