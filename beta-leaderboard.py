@@ -882,4 +882,6 @@ with admin_tab:
             except Exception:
                 st.experimental_rerun()
     else:
-        st.info("Enter the admin passphrase to access exports
+        st.info("Enter the admin passphrase to access exports and deletion tools.")
+
+# end of file
