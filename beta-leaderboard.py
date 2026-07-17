@@ -304,7 +304,7 @@ def export_to_excel(rows: List[Dict[str, Any]]) -> BytesIO:
     for r in rows:
         data.append({
             "Submitted": r.get("created_at"),
-            "Name": r.get("student_name"),
+            "Group": r.get("student_name"),
             "Email": r.get("email"),
             "Section": r.get("section"),
             "Stock (Near 0)": r.get("stock0"),
@@ -539,7 +539,7 @@ def safe_dataframe(data, **kwargs):
 st.set_page_config(page_title="Beta Hunt – Leaderboard", page_icon="📈", layout="wide")
 st.title(APP_TITLE)
 
-st.caption("Submit three stocks with betas and screenshots as proof. Each student can submit only once.")
+st.caption("Submit three stocks with betas and screenshots as proof. Each group can submit only once.")
 
 # Check database health on app load
 check_database_health()
@@ -559,7 +559,7 @@ submit_tab, leaderboard_tab, admin_tab = st.tabs(["Submit", "Leaderboard", "Admi
 with submit_tab:
     st.subheader("Submit your picks")
     with st.form("submission_form", clear_on_submit=False):
-        student_name = st.text_input("Your name *")
+        group = st.selectbox("Your group *", options=["-- Select your group --", "Group A", "Group B", "Group C", "Group D", "Group E"])
         email = st.text_input("Email *")
         section = st.selectbox("Section *", options=["-- Select your section --", "Section S1", "Section S2"])
 
@@ -594,12 +594,12 @@ with submit_tab:
 
         notes = st.text_area("Notes (optional)")
         agree = st.checkbox("I confirm these values are taken from a reliable source and the screenshots are unedited.")
-        submitted = st.form_submit_button("Submit my entry", use_container_width=True)
+        submitted = st.form_submit_button("Submit my entry", width='stretch')
 
     if submitted:
         # Required fields
-        if not student_name or not student_name.strip():
-            st.error("Please enter your name.")
+        if not group or group == "-- Select your group --":
+            st.error("Please select your group.")
             st.stop()
         if not email or not email.strip():
             st.error("Please enter your email.")
@@ -611,13 +611,13 @@ with submit_tab:
             st.error("Please select your section (S1 or S2).")
             st.stop()
         
-        # Check if this email has already submitted
+        # Check if this group has already submitted (per section, independent of email)
         sb = get_client()
         _, table_name, _ = get_storage_cfg()
         try:
-            existing = sb.table(table_name).select("id").eq("team", email.strip().lower()).execute()
+            existing = sb.table(table_name).select("id").eq("student_name", group).eq("section", section).execute()
             if existing.data and len(existing.data) > 0:
-                st.error("❌ This email has already submitted. Each student can only submit once. If you need to change your submission, please contact the instructor.")
+                st.error(f"❌ {group} has already submitted in {section}. Each group can only submit once. If your group needs to change its submission, please contact the instructor.")
                 st.stop()
         except Exception as e:
             st.error("❌ Database error while checking existing submissions. The database might be paused.")
@@ -656,7 +656,7 @@ with submit_tab:
         with st.spinner("Saving your submission..."):
             result = save_submission(
                 team=(email or "").strip().lower(),
-                student_name=student_name,
+                student_name=group,
                 email=email,
                 section=section,
                 row={
@@ -711,49 +711,49 @@ with leaderboard_tab:
             st.markdown("### 🥇 Closest to 0")
             data = [{
                 "Rank": i+1,
-                "Name": r.get("student_name"),
+                "Group": r.get("student_name"),
                 "Stock": r.get("stock0"),
                 "Beta": float(r["beta0"]) if r.get("beta0") is not None else None,
                 "Error": round(float(r["err0"]), 4) if r.get("err0") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["near0"][:10])]
-            safe_dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, width='stretch', hide_index=True)
 
         with c2:
             st.markdown("### 🥈 Closest to 1")
             data = [{
                 "Rank": i+1,
-                "Name": r.get("student_name"),
+                "Group": r.get("student_name"),
                 "Stock": r.get("stock1"),
                 "Beta": float(r["beta1"]) if r.get("beta1") is not None else None,
                 "Error": round(float(r["err1"]), 4) if r.get("err1") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["near1"][:10])]
-            safe_dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, width='stretch', hide_index=True)
 
         with c3:
             st.markdown("### 🥉 Highest beta")
             data = [{
                 "Rank": i+1,
-                "Name": r.get("student_name"),
+                "Group": r.get("student_name"),
                 "Stock": r.get("stock_hi"),
                 "Beta": float(r["beta_hi"]) if r.get("beta_hi") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f1["high"][:10])]
-            safe_dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, width='stretch', hide_index=True)
 
         st.markdown("---")
         st.markdown("### Overall (sum of ranks)")
         data = [{
             "Rank": i+1,
-            "Name": r.get("student_name"),
+            "Group": r.get("student_name"),
             "Near 0 rank": int(r["rank0"]) if r.get("rank0") is not None else None,
             "Near 1 rank": int(r["rank1"]) if r.get("rank1") is not None else None,
             "High beta rank": int(r["rankh"]) if r.get("rankh") is not None else None,
             "Total": int(r["total_rank"]) if r.get("total_rank") is not None else None,
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores_f1["overall"][:20])]
-        safe_dataframe(data, use_container_width=True, hide_index=True)
+        safe_dataframe(data, width='stretch', hide_index=True)
     
     with f2_tab:
         st.markdown("#### Section S2 Rankings")
@@ -765,49 +765,49 @@ with leaderboard_tab:
             st.markdown("### 🥇 Closest to 0")
             data = [{
                 "Rank": i+1,
-                "Name": r.get("student_name"),
+                "Group": r.get("student_name"),
                 "Stock": r.get("stock0"),
                 "Beta": float(r["beta0"]) if r.get("beta0") is not None else None,
                 "Error": round(float(r["err0"]), 4) if r.get("err0") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["near0"][:10])]
-            safe_dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, width='stretch', hide_index=True)
 
         with c2:
             st.markdown("### 🥈 Closest to 1")
             data = [{
                 "Rank": i+1,
-                "Name": r.get("student_name"),
+                "Group": r.get("student_name"),
                 "Stock": r.get("stock1"),
                 "Beta": float(r["beta1"]) if r.get("beta1") is not None else None,
                 "Error": round(float(r["err1"]), 4) if r.get("err1") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["near1"][:10])]
-            safe_dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, width='stretch', hide_index=True)
 
         with c3:
             st.markdown("### 🥉 Highest beta")
             data = [{
                 "Rank": i+1,
-                "Name": r.get("student_name"),
+                "Group": r.get("student_name"),
                 "Stock": r.get("stock_hi"),
                 "Beta": float(r["beta_hi"]) if r.get("beta_hi") is not None else None,
                 "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
             } for i, r in enumerate(scores_f2["high"][:10])]
-            safe_dataframe(data, use_container_width=True, hide_index=True)
+            safe_dataframe(data, width='stretch', hide_index=True)
 
         st.markdown("---")
         st.markdown("### Overall (sum of ranks)")
         data = [{
             "Rank": i+1,
-            "Name": r.get("student_name"),
+            "Group": r.get("student_name"),
             "Near 0 rank": int(r["rank0"]) if r.get("rank0") is not None else None,
             "Near 1 rank": int(r["rank1"]) if r.get("rank1") is not None else None,
             "High beta rank": int(r["rankh"]) if r.get("rankh") is not None else None,
             "Total": int(r["total_rank"]) if r.get("total_rank") is not None else None,
             "Submitted": r.get("created_at", "")[:16].replace("T", " ") if r.get("created_at") else "",
         } for i, r in enumerate(scores_f2["overall"][:20])]
-        safe_dataframe(data, use_container_width=True, hide_index=True)
+        safe_dataframe(data, width='stretch', hide_index=True)
 
 with admin_tab:
     st.subheader("Admin tools")
