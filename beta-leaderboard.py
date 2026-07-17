@@ -559,9 +559,9 @@ submit_tab, leaderboard_tab, admin_tab = st.tabs(["Submit", "Leaderboard", "Admi
 with submit_tab:
     st.subheader("Submit your picks")
     with st.form("submission_form", clear_on_submit=False):
+        section = st.selectbox("Section *", options=["-- Select your section --", "Section S1", "Section S2"])
         group = st.selectbox("Your group *", options=["-- Select your group --", "Group A", "Group B", "Group C", "Group D", "Group E"])
         email = st.text_input("Email *")
-        section = st.selectbox("Section *", options=["-- Select your section --", "Section S1", "Section S2"])
 
         st.markdown("---")
         st.info("ℹ️ Betas must be in the range of −5 to 20.")
@@ -598,6 +598,9 @@ with submit_tab:
 
     if submitted:
         # Required fields
+        if not section or section == "-- Select your section --":
+            st.error("Please select your section (S1 or S2).")
+            st.stop()
         if not group or group == "-- Select your group --":
             st.error("Please select your group.")
             st.stop()
@@ -606,9 +609,6 @@ with submit_tab:
             st.stop()
         if not validate_email(email):
             st.error("Please enter a valid email address (e.g., student@university.edu).")
-            st.stop()
-        if not section or section == "-- Select your section --":
-            st.error("Please select your section (S1 or S2).")
             st.stop()
         
         # Check if this group has already submitted (per section, independent of email)
